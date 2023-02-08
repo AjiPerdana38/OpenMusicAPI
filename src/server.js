@@ -2,15 +2,12 @@ require('dotenv').config()
 
 const Hapi = require('@hapi/hapi')
 
-// error handling
 const ClientError = require('./exceptions/ClientError')
 
-// Albums
 const albums = require('./api/albums')
 const AlbumsServices = require('./service/postgres/AlbumsService')
 const AlbumsValidator = require('./validator/albums')
 
-// songs
 const songs = require('./api/songs')
 const SongsServices = require('./service/postgres/SongsService')
 const Songsvalidator = require('./validator/songs')
@@ -29,7 +26,6 @@ const init = async () => {
     }
   })
 
-  // register albums plugins
   await server.register({
     plugin: albums,
     options: {
@@ -38,7 +34,6 @@ const init = async () => {
     }
   })
 
-  // register songs plugins
   await server.register({
     plugin: songs,
     options: {
@@ -58,7 +53,6 @@ const init = async () => {
           message: response.message
         })
         newResponse.code(response.statusCode)
-        console.log(newResponse)
         return newResponse
       }
       // mempertahankan penanganan client error oleh hapi secara native, seperti 404, etc.
@@ -71,7 +65,6 @@ const init = async () => {
         message: 'terjadi kegagalan pada server kami'
       })
       newResponse.code(500)
-      console.log(newResponse)
       return newResponse
     }
     // jika bukan error, lanjutkan dengan response sebelumnya (tanpa terintervensi)
