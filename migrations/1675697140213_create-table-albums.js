@@ -1,5 +1,3 @@
-/* eslint-disable camelcase */
-
 exports.up = pgm => {
   pgm.createTable('albums', {
     id: {
@@ -8,15 +6,15 @@ exports.up = pgm => {
     },
     name: {
       type: 'TEXT',
-      noteNull: true
+      notNull: true
     },
     year: {
       type: 'INT',
-      noteNull: true
+      notNull: true
     }
   })
 }
 
 exports.down = pgm => {
-  pgm.droptable('albums')
+  pgm.dropTable('albums')
 }

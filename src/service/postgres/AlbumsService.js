@@ -31,13 +31,24 @@ class AlbumsServices {
       values: [id]
     }
 
+    const queryGetSongs = {
+      text: 'SELECT songs.id, songs.title, songs.performer FROM songs INNER JOIN albums ON albums.id = songs."albumId" WHERE albums.id=$1',
+      values: [id]
+    }
+
     const albumsResult = await this._pool.query(queryGetAlbum)
+    const songsResult = await this._pool.query(queryGetSongs)
 
     if (!albumsResult.rows.length) {
       throw new NotFoundError('Album tidak ditemukan')
     }
 
-    return albumsResult.rows[0]
+    return {
+      id: albumsResult.rows[0].id,
+      name: albumsResult.rows[0].name,
+      year: albumsResult.rows[0].year,
+      songs: songsResult.rows
+    }
   }
 
   async editAlbumById (id, { name, year }) {
