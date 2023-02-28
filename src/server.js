@@ -16,10 +16,16 @@ const users = require('./api/users')
 const UsersServices = require('./service/postgres/UsersService')
 const Usersvalidator = require('./validator/users')
 
+const authentications = require('./api/authentications')
+const AuthenticationsServices = require('./service/postgres/AuthenticationsServices')
+const TokenManager = require('./tokenize/TokenManager')
+const AuthenticationsValidator = require('./validator/authentications')
+
 const init = async () => {
   const albumsService = new AlbumsServices()
   const songsService = new SongsServices()
   const usersService = new UsersServices()
+  const authenticationsService = new AuthenticationsServices()
 
   const server = Hapi.server({
     port: process.env.PORT,
@@ -52,6 +58,15 @@ const init = async () => {
         service: usersService,
         validator: Usersvalidator
       }
+    },
+    {
+      plugin: authentications,
+      options: {
+        authenticationsService,
+        usersService,
+        tokenManager: TokenManager,
+        validator: AuthenticationsValidator
+      }
     }
   ])
 
@@ -66,6 +81,7 @@ const init = async () => {
           message: response.message
         })
         newResponse.code(response.statusCode)
+        console.log(newResponse)
         return newResponse
       }
       // mempertahankan penanganan client error oleh hapi secara native, seperti 404, etc.
