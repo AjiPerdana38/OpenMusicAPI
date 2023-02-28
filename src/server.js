@@ -12,9 +12,14 @@ const songs = require('./api/songs')
 const SongsServices = require('./service/postgres/SongsService')
 const Songsvalidator = require('./validator/songs')
 
+const users = require('./api/users')
+const UsersServices = require('./service/postgres/UsersService')
+const Usersvalidator = require('./validator/users')
+
 const init = async () => {
   const albumsService = new AlbumsServices()
   const songsService = new SongsServices()
+  const usersService = new UsersServices()
 
   const server = Hapi.server({
     port: process.env.PORT,
@@ -26,21 +31,29 @@ const init = async () => {
     }
   })
 
-  await server.register({
-    plugin: albums,
-    options: {
-      service: albumsService,
-      validator: AlbumsValidator
+  await server.register([
+    {
+      plugin: albums,
+      options: {
+        service: albumsService,
+        validator: AlbumsValidator
+      }
+    },
+    {
+      plugin: songs,
+      options: {
+        service: songsService,
+        validator: Songsvalidator
+      }
+    },
+    {
+      plugin: users,
+      options: {
+        service: usersService,
+        validator: Usersvalidator
+      }
     }
-  })
-
-  await server.register({
-    plugin: songs,
-    options: {
-      service: songsService,
-      validator: Songsvalidator
-    }
-  })
+  ])
 
   server.ext('onPreResponse', (request, h) => {
     // mendapatkan konteks response dari request
@@ -65,6 +78,7 @@ const init = async () => {
         message: 'terjadi kegagalan pada server kami'
       })
       newResponse.code(500)
+      console.log(newResponse)
       return newResponse
     }
     // jika bukan error, lanjutkan dengan response sebelumnya (tanpa terintervensi)
