@@ -1,0 +1,154 @@
+/* eslint-disable quotes */
+const { Pool } = require('pg')
+const { nanoid } = require('nanoid')
+const InvariantError = require('../../exceptions/InvariantError')
+const NotFoundError = require('../../exceptions/NotFoundError')
+const AuthorizationError = require('../../exceptions/AuthorizationError')
+
+class PlaylistsServices {
+  constructor () {
+    this._pool = new Pool()
+  }
+
+  async addPlaylist ({ name, owner }) {
+    const id = `playlist-${nanoid(16)}`
+
+    const query = {
+      text: /* sql */ `INSERT INTO playlists VALUES($1, $2, $3) RETURNING id`,
+      values: [id, name, owner]
+    }
+
+    const result = await this._pool.query(query)
+
+    if (!result.rows.length) {
+      throw new InvariantError('Playlist gagal ditambahkan')
+    }
+
+    return result.rows[0].id
+  }
+
+  async getPlaylists (owner) {
+    const query = {
+      text: /* sql */ `SELECT playlists.id, playlists.name, users.username
+      FROM playlists
+      LEFT JOIN users ON playlists.owner = users.id
+      WHERE playlists.owner = $1
+      GROUP BY playlists.id, users.username`,
+      values: [owner]
+    }
+
+    const result = await this._pool.query(query)
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Anda belum membuat playlist')
+    }
+
+    return result.rows
+  }
+
+  async deletePlaylistById (id) {
+    const query = {
+      text: /* sql */ `DELETE FROM playlists WHERE id = $1 RETURNING id`,
+      values: [id]
+    }
+
+    const result = await this._pool.query(query)
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Gagal menghapus playlist, id tidak ditemukan')
+    }
+  }
+
+  async addPlaylistSongs ({ playlistId, songId }) {
+    const queryCekSong = {
+      text: /* sql */ `SELECT title FROM songs WHERE id = $1`,
+      values: [songId]
+    }
+    const song = await this._pool.query(queryCekSong)
+
+    if (!song.rows.length) {
+      throw new NotFoundError('Lagu tidak ditemukan')
+    }
+
+    const id = `song-${nanoid(16)}`
+
+    const query = {
+      text: /* sql */ `INSERT INTO playlist_songs VALUES($1, $2, $3) RETURNING id`,
+      values: [id, playlistId, songId]
+    }
+
+    const result = await this._pool.query(query)
+
+    if (!result.rows[0].id) {
+      throw new InvariantError('lagu gagal ditambahkan pada playlist')
+    }
+
+    return result.rows[0].id
+  }
+
+  async getPlaylistSongs (id) {
+    const query = {
+      text: /* sql */ `SELECT playlists.*, users.username, songs.id as songs_id, songs.title, songs.performer FROM playlists
+      LEFT JOIN playlist_songs ON playlist_songs.playlist_id = playlists.id
+      LEFT JOIN songs ON songs.id = playlist_songs.song_id
+      LEFT JOIN users ON users.id = playlists.owner
+      WHERE playlists.id = $1`,
+      values: [id]
+    }
+
+    const result = await this._pool.query(query)
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Playlist tidak ditemukan')
+    }
+
+    const songs = result.rows.map((song) => ({
+      id: song.songs_id,
+      title: song.title,
+      performer: song.performer
+    }))
+
+    const finalPlaylistResult = {
+      id: result.rows[0].id,
+      name: result.rows[0].name,
+      username: result.rows[0].username,
+      songs
+    }
+
+    return finalPlaylistResult
+  }
+
+  async deletePlaylistSongById (playlistId, songId) {
+    const query = {
+      text: /* sql */ `DELETE FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2 RETURNING id`,
+      values: [playlistId, songId]
+    }
+
+    const result = await this._pool.query(query)
+
+    if (!result.rowCount) {
+      throw new NotFoundError('Gagal Menghapus playlist. Id tidak ditemukan')
+    }
+  }
+
+  async verifyPlaylistOwner (id, owner) {
+    const query = {
+      text: /* sql */ `SELECT * FROM playlists WHERE id = $1`,
+      values: [id]
+    }
+
+    const result = await this._pool.query(query)
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Playlist tidak ditemukan')
+    }
+
+    const playlist = result.rows[0]
+
+    if (playlist.owner !== owner) {
+      throw new AuthorizationError('Anda tidak memiliki hak untuk mengakses data ini')
+    }
+  }
+}
+
+module.exports = PlaylistsServices
