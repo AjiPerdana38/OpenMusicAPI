@@ -6,8 +6,9 @@ const NotFoundError = require('../../exceptions/NotFoundError')
 const AuthorizationError = require('../../exceptions/AuthorizationError')
 
 class PlaylistsServices {
-  constructor () {
+  constructor (collaborationService) {
     this._pool = new Pool()
+    this._collaborationService = collaborationService
   }
 
   async addPlaylist ({ name, owner }) {
@@ -32,16 +33,13 @@ class PlaylistsServices {
       text: /* sql */ `SELECT playlists.id, playlists.name, users.username
       FROM playlists
       LEFT JOIN users ON playlists.owner = users.id
+      LEFT JOIN collaborations ON playlists.id  = collaborations.playlist_id
       WHERE playlists.owner = $1
-      GROUP BY playlists.id, users.username`,
+      OR collaborations.user_id = $1`,
       values: [owner]
     }
 
     const result = await this._pool.query(query)
-
-    if (!result.rows.length) {
-      throw new NotFoundError('Anda belum membuat playlist')
-    }
 
     return result.rows
   }
@@ -147,6 +145,23 @@ class PlaylistsServices {
 
     if (playlist.owner !== owner) {
       throw new AuthorizationError('Anda tidak memiliki hak untuk mengakses data ini')
+    }
+  }
+
+  async verifyPlaylistAccess (playlistId, userId) {
+    try {
+      await this.verifyPlaylistOwner(playlistId, userId)
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error
+      }
+
+      // eslint-disable-next-line no-useless-catch
+      try {
+        await this._collaborationService.verifyCollaborator(playlistId, userId)
+      } catch (error) {
+        throw error
+      }
     }
   }
 }
