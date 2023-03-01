@@ -129,6 +129,36 @@ class PlaylistsServices {
     }
   }
 
+  async addActivityToPlaylistSong (playlistId, songId, userId, action) {
+    const id = `activity-${nanoid(16)}`
+
+    const query = {
+      text: /* sql */ `INSERT INTO playlist_song_activities VALUES($1, $2, $3, $4, $5) RETURNING id`,
+      values: [id, playlistId, songId, userId, action]
+    }
+
+    const result = await this._pool.query(query)
+
+    if (!result.rows[0].id) {
+      throw new InvariantError('Aktivitas gagal ditambahkan')
+    }
+  }
+
+  async getActivityToPlaylistSong (playlistId) {
+    const query = {
+      text: /* sql */ `SELECT users.username, songs.title, action, time
+      FROM playlist_song_activities
+      JOIN songs ON songs.id = playlist_song_activities.song_id
+      JOIN users ON users.id = playlist_song_activities.user_id
+      WHERE playlist_song_activities.playlist_id = $1`,
+      values: [playlistId]
+    }
+
+    const result = await this._pool.query(query)
+
+    return result.rows
+  }
+
   async verifyPlaylistOwner (id, owner) {
     const query = {
       text: /* sql */ `SELECT * FROM playlists WHERE id = $1`,
