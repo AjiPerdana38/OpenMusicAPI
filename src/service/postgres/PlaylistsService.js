@@ -21,7 +21,7 @@ class PlaylistsServices {
 
     const result = await this._pool.query(query)
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new InvariantError('Playlist gagal ditambahkan')
     }
 
@@ -52,23 +52,13 @@ class PlaylistsServices {
 
     const result = await this._pool.query(query)
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Gagal menghapus playlist, id tidak ditemukan')
     }
   }
 
   async addPlaylistSongs ({ playlistId, songId }) {
-    const queryCekSong = {
-      text: /* sql */ `SELECT title FROM songs WHERE id = $1`,
-      values: [songId]
-    }
-    const song = await this._pool.query(queryCekSong)
-
-    if (!song.rows.length) {
-      throw new NotFoundError('Lagu tidak ditemukan')
-    }
-
-    const id = `song-${nanoid(16)}`
+    const id = `playlistsong-${nanoid(16)}`
 
     const query = {
       text: /* sql */ `INSERT INTO playlist_songs VALUES($1, $2, $3) RETURNING id`,
@@ -96,7 +86,7 @@ class PlaylistsServices {
 
     const result = await this._pool.query(query)
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Playlist tidak ditemukan')
     }
 
@@ -106,14 +96,12 @@ class PlaylistsServices {
       performer: song.performer
     }))
 
-    const finalPlaylistResult = {
+    return {
       id: result.rows[0].id,
       name: result.rows[0].name,
       username: result.rows[0].username,
       songs
     }
-
-    return finalPlaylistResult
   }
 
   async deletePlaylistSongById (playlistId, songId) {
@@ -167,7 +155,7 @@ class PlaylistsServices {
 
     const result = await this._pool.query(query)
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Playlist tidak ditemukan')
     }
 
