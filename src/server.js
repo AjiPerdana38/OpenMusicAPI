@@ -30,6 +30,13 @@ const collaborations = require('./api/collaborations')
 const CollaborationsServices = require('./service/postgres/collaborationsServices')
 const CollaborationsValidator = require('./validator/collaborations')
 
+const _exports = require('./api/Exports')
+const ProducerService = require('./service/rabbitmq/ProducerService')
+const ExportsValidator = require('./validator/exports')
+
+const { app } = require('./utils/config')
+const { host, port } = app
+
 const init = async () => {
   const albumsServices = new AlbumsServices()
   const songsServices = new SongsServices()
@@ -39,8 +46,8 @@ const init = async () => {
   const playlistService = new PlaylistsServices(collaborationsServices)
 
   const server = Hapi.server({
-    port: process.env.PORT,
-    host: process.env.HOST,
+    port,
+    host,
     routes: {
       cors: {
         origin: ['*']
@@ -117,6 +124,14 @@ const init = async () => {
         userService: usersService,
         validator: CollaborationsValidator
       }
+    },
+    {
+      plugin: _exports,
+      options: {
+        producerService: ProducerService,
+        playlistService,
+        validator: ExportsValidator
+      }
     }
   ])
 
@@ -131,6 +146,7 @@ const init = async () => {
           message: response.message
         })
         newResponse.code(response.statusCode)
+        console.log(newResponse)
         return newResponse
       }
       // mempertahankan penanganan client error oleh hapi secara native, seperti 404, etc.
@@ -143,6 +159,7 @@ const init = async () => {
         message: 'terjadi kegagalan pada server kami'
       })
       newResponse.code(500)
+      console.log(newResponse)
       return newResponse
     }
     // jika bukan error, lanjutkan dengan response sebelumnya (tanpa terintervensi)
