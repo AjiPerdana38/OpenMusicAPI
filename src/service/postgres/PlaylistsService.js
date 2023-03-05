@@ -97,9 +97,7 @@ class PlaylistsServices {
     }))
 
     return {
-      id: result.rows[0].id,
-      name: result.rows[0].name,
-      username: result.rows[0].username,
+      ...result.rows[0],
       songs
     }
   }

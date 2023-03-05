@@ -1,7 +1,9 @@
+/* eslint-disable quotes */
 const { nanoid } = require('nanoid')
 const { Pool } = require('pg')
 const InvariantError = require('../../exceptions/InvariantError')
 const NotFoundError = require('../../exceptions/NotFoundError')
+const { mapDBToModel } = require('../../utils/index')
 
 class AlbumsServices {
   constructor () {
@@ -44,7 +46,7 @@ class AlbumsServices {
     }
 
     return {
-      ...albumsResult.rows[0],
+      ...albumsResult.rows.map(mapDBToModel)[0],
       songs: songsResult.rows
     }
   }
@@ -73,6 +75,13 @@ class AlbumsServices {
     if (!result.rowCount) {
       throw new NotFoundError('Album gagal dihapus, Id tidak ditemukan')
     }
+  }
+
+  async editAlbumCoverById (id, fileLocation) {
+    await this._pool.query({
+      text: /* sql */ `UPDATE albums SET cover_url = $1 WHERE id = $2 RETURNING id`,
+      values: [fileLocation, id]
+    })
   }
 }
 
