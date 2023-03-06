@@ -75,6 +75,35 @@ class AlbumsHandler {
     response.code(201)
     return response
   }
+
+  async postAlbumLikesHandler (request, h) {
+    const { id: albumId } = request.params
+    const { id: userId } = request.auth.credentials
+
+    await this._service.getAlbumById(albumId)
+
+    const message = await this._service.likeAlbum(userId, albumId)
+    const response = h.response({
+      status: 'success',
+      message
+    })
+    response.code(201)
+    return response
+  }
+
+  async getAlbumLikesByIdHandler (request, h) {
+    const { id } = request.params
+    const { likes, dataSource } = await this._service.getAlbumLikesById(id)
+    const response = h.response({
+      status: 'success',
+      data: {
+        likes
+      }
+    })
+    response.header('X-Data-Source', dataSource)
+    response.code(200)
+    return response
+  }
 }
 
 module.exports = AlbumsHandler

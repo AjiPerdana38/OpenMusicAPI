@@ -6,8 +6,9 @@ const NotFoundError = require('../../exceptions/NotFoundError')
 const { mapDBToModel } = require('../../utils/index')
 
 class AlbumsServices {
-  constructor () {
+  constructor (cacheService) {
     this._pool = new Pool()
+    this._cacheService = cacheService
   }
 
   async addAlbum ({ name, year }) {
@@ -82,6 +83,84 @@ class AlbumsServices {
       text: /* sql */ `UPDATE albums SET cover_url = $1 WHERE id = $2 RETURNING id`,
       values: [fileLocation, id]
     })
+  }
+
+  async likeAlbum (userId, albumId) {
+    const id = `like-${nanoid(16)}`
+
+    const query = {
+      text: /* sql */ `SELECT * FROM user_album_likes
+      WHERE user_id = $1
+      AND album_id = $2`,
+      values: [userId, albumId]
+    }
+
+    const result = await this._pool.query(query)
+
+    let message = ''
+
+    if (!result.rowCount) {
+      const query = {
+        text: /* sql */ `INSERT INTO user_album_likes
+        VALUES($1, $2, $3)
+        RETURNING id`,
+        values: [id, userId, albumId]
+      }
+
+      const result = await this._pool.query(query)
+
+      if (!result.rowCount) {
+        throw new InvariantError('Gagal menyukai album')
+      }
+      message = 'Berhasil menyukai album'
+    } else {
+      const query = {
+        text: /* sql */ `DELETE FROM user_album_likes
+        WHERE user_id = $1
+        AND album_id = $2
+        RETURNING id`,
+        values: [userId, albumId]
+      }
+
+      const result = await this._pool.query(query)
+
+      if (!result.rowCount) {
+        throw new InvariantError('Gagal batal menyukai album')
+      }
+
+      message = 'Batal menyukai album'
+    }
+
+    await this._cacheService.delete(`user_album_likes:${albumId}`)
+    return message
+  }
+
+  async getAlbumLikesById (id) {
+    try {
+      const dataSource = 'cache'
+      const result = await this._cacheService.get(`user_album_likes:${id}`)
+      return {
+        likes: +result,
+        dataSource
+      }
+    } catch (error) {
+      const query = {
+        text: /* sql */ `SELECT * FROM user_album_likes
+        WHERE album_id = $1`,
+        values: [id]
+      }
+
+      const result = await this._pool.query(query)
+      const likes = result.rowCount
+      const dataSource = 'data-server'
+
+      await this._cacheService.set(`user_album_likes:${id}`, likes)
+
+      return {
+        likes,
+        dataSource
+      }
+    }
   }
 }
 

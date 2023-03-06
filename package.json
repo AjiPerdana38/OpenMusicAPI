@@ -23,7 +23,8 @@
     "nanoid": "^3.3.4",
     "node-pg-migrate": "^6.2.2",
     "nodemon": "^2.0.20",
-    "pg": "^8.9.0"
+    "pg": "^8.9.0",
+    "redis": "^4.6.5"
   },
   "devDependencies": {
     "eslint": "^8.33.0",

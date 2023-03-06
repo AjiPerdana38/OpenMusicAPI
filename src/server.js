@@ -40,11 +40,14 @@ const uploads = require('./api/uploads')
 const StorageService = require('./service/storage/StorageService')
 const UploadsValidator = require('./validator/uploads')
 
+const CacheService = require('./service/redis/ChacheService')
+
 const { app } = require('./utils/config')
 const { host, port } = app
 
 const init = async () => {
-  const albumsServices = new AlbumsServices()
+  const cacheService = new CacheService()
+  const albumsServices = new AlbumsServices(cacheService)
   const songsServices = new SongsServices()
   const usersService = new UsersServices()
   const authenticationsService = new AuthenticationsServices()
@@ -165,7 +168,6 @@ const init = async () => {
           message: response.message
         })
         newResponse.code(response.statusCode)
-        console.log(newResponse)
         return newResponse
       }
       // mempertahankan penanganan client error oleh hapi secara native, seperti 404, etc.
@@ -178,7 +180,6 @@ const init = async () => {
         message: 'terjadi kegagalan pada server kami'
       })
       newResponse.code(500)
-      console.log(newResponse)
       return newResponse
     }
     // jika bukan error, lanjutkan dengan response sebelumnya (tanpa terintervensi)

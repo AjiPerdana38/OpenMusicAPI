@@ -42,6 +42,19 @@ const routes = (handler) => [
         path: resolve(__dirname, 'file/covers')
       }
     }
+  },
+  {
+    method: 'POST',
+    path: '/albums/{id}/likes',
+    handler: handler.postAlbumLikesHandler,
+    options: {
+      auth: 'openmusicapp_jwt'
+    }
+  },
+  {
+    method: 'GET',
+    path: '/albums/{id}/likes',
+    handler: handler.getAlbumLikesByIdHandler
   }
 ]
 
