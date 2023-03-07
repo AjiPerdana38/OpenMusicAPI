@@ -1,9 +1,11 @@
 const autoBind = require('auto-bind')
 
 class AlbumsHandler {
-  constructor (service, validator) {
+  constructor (service, storageService, validator, uploadsValidator) {
     this._service = service
+    this._storageService = storageService
     this._validator = validator
+    this._uploadsValidator = uploadsValidator
 
     autoBind(this)
   }
@@ -54,6 +56,53 @@ class AlbumsHandler {
       status: 'success',
       message: 'Album berhasil dihapus'
     }
+  }
+
+  async postUploadImageHandler (request, h) {
+    const { id } = request.params
+    const { cover } = request.payload
+
+    this._uploadsValidator.validateImageHeaders(cover.hapi.headers)
+    const filename = await this._storageService.writeFile(cover, cover.hapi)
+    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/albums/covers/${filename}`
+
+    await this._service.editAlbumCoverById(id, fileLocation)
+
+    const response = h.response({
+      status: 'success',
+      message: 'Sampul berhasil diunggah'
+    })
+    response.code(201)
+    return response
+  }
+
+  async postAlbumLikesHandler (request, h) {
+    const { id: albumId } = request.params
+    const { id: userId } = request.auth.credentials
+
+    await this._service.getAlbumById(albumId)
+
+    const message = await this._service.likeAlbum(userId, albumId)
+    const response = h.response({
+      status: 'success',
+      message
+    })
+    response.code(201)
+    return response
+  }
+
+  async getAlbumLikesByIdHandler (request, h) {
+    const { id } = request.params
+    const { likes, dataSource } = await this._service.getAlbumLikesById(id)
+    const response = h.response({
+      status: 'success',
+      data: {
+        likes
+      }
+    })
+    response.header('X-Data-Source', dataSource)
+    response.code(200)
+    return response
   }
 }
 
