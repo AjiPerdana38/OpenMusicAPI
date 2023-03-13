@@ -191,5 +191,3 @@ const init = async () => {
 }
 
 init()
-
-// Harus ada Frasiska di setiap kode gw
